@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id_user       String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password_hash String
+  role          Role           @default(USER)
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  events        Event[]        @relation("CreatedBy")
+  registrations Registration[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model Event {
+  id_event              String    @id @default(uuid())
+  title                 String
+  description           String?
+  location              String?
+  start_datetime        DateTime?
+  end_datetime          DateTime?
+  max_participants      Int?
+  certificate_available Boolean   @default(false)
+  created_by            String
+  created_at            DateTime  @default(now())
+  creator               User                      @relation("CreatedBy", fields: [created_by], references: [id_user])
+  registrations         Registration[]
+  certificate_sessions  EventCertificateSession[]
+
+  @@map("events")
+}
+
+enum RegistrationStatus {
+  INSCRITO
+  CANCELADO
+  CONFIRMADO
+}
+
+model Registration {
+  id_registration       String             @id @default(uuid())
+  id_user               String
+  id_event              String
+  status                RegistrationStatus @default(INSCRITO)
+  checkin_at            DateTime?
+  certificate_release   Boolean            @default(false)
+  certificate_issued_at DateTime?
+  created_at            DateTime           @default(now())
+  user                  User               @relation(fields: [id_user], references: [id_user])
+  event                 Event              @relation(fields: [id_event], references: [id_event])
+
+  @@unique([id_user, id_event])
+  @@map("registrations")
+}
+
+model EventCertificateSession {
+  id_certificate String    @id @default(uuid())
+  id_event       String
+  release_token  String?
+  is_active      Boolean   @default(true)
+  activated_at   DateTime?
+  event          Event     @relation(fields: [id_event], references: [id_event])
+
+  @@map("event_certificate_sessions")
+}
